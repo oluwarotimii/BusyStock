@@ -1,0 +1,75 @@
+# Busy Accounting Stock Monitor - System Description
+
+## Overview
+The Busy Accounting Stock Monitor is a .NET Worker Service that periodically monitors a Busy accounting database and sends stock/product data updates to a configured API endpoint. It runs as a background service that checks for product data changes at regular intervals.
+
+## What We've Fixed/Configured
+
+### 1. Build Issues Resolved
+- Fixed tuple errors in the Setup program (CS8124) by ensuring all tuples have at least 2 elements
+- Added missing Dapper package reference
+- Fixed Target Framework issues and duplicate assembly attribute errors
+- Updated the project to properly target .NET 10.0 with appropriate build settings
+
+### 2. Database Connection Configuration
+- Successfully configured the connection string to use Windows Authentication with your local BUSY SQL Server instance
+- Connection string: `Data Source=(local)\BUSY;Integrated Security=True;Persist Security Info=False;Pooling=False;MultipleActiveResultSets=False;TrustServerCertificate=True;`
+- This connects to your local SQL Server instance named "BUSY" using your current Windows credentials
+
+### 3. Configuration Parameters
+- **Polling Interval**: 30 seconds (default)
+- **API Endpoint**: http://localhost:5000/api/stock/update (default)
+- **Database**: BUSY instance running on local machine via Windows Authentication
+
+## How the Code Works
+
+### 1. ProductWatcherWorker
+- This is the main service worker that runs continuously
+- Executes the data update process at specified intervals (every 30 seconds)
+- Logs information about its operations
+
+### 2. ProductDataService
+- Contains methods to retrieve product data from the Busy database
+- Two main functions:
+  - `GetProductDataAsync()`: Retrieves all product data
+  - `GetProductDataIncrementalAsync()`: Retrieves only products that have changed since the last check
+- Uses Dapper for efficient database queries
+- Contains the SQL queries that interface with Busy's database structure
+
+### 3. Database Queries
+- The system uses specific SQL queries to extract product information from Busy's database
+- It focuses on Master1 table for product details (names, prices)
+- It queries Tran2 table for stock movements and available quantities
+- Only checks for items with specific codes (1152, 1153, 1154, 1155 in the example)
+
+### 4. Data Processing Flow
+1. The service starts and initializes
+2. Every 30 seconds, it checks for product data updates
+3. It queries the BUSY database for new/changed product information
+4. If changes are detected, it prepares the data for transmission
+5. The data is sent to the configured API endpoint
+6. The service continues monitoring until stopped
+
+### 5. Setup Program
+- Allows configuration of database connection details
+- Allows configuration of API endpoint
+- Allows configuration of polling interval
+- Updates the appsettings.json file with the provided configuration
+
+### 6. Service Installation
+- The service can be installed as a Windows Service using install.bat
+- Once installed, it runs automatically at system startup
+- Can be managed using Windows Services console
+
+## Current Status
+- The service is successfully connecting to your local BUSY database instance
+- It is properly configured to use Windows Authentication
+- The service is running and attempting to monitor product data
+- It is attempting to send data to the configured API endpoint
+
+## Next Steps
+1. Ensure your API endpoint (http://localhost:5000/api/stock/update) is available and ready to receive data
+2. Verify that your BUSY database contains the expected product information
+3. Test the SQL queries to ensure they're accessing the correct tables and data
+4. Consider installing as a Windows Service for automatic startup
+5. Monitor logs to verify data transmission is working as expected

@@ -1,0 +1,106 @@
+# Simple Stock API Setup
+
+## Overview
+This is a simple ASP.NET Core Web API to receive product/stock data from your Busy Accounting Stock Monitor.
+
+## How to Create the API
+
+1. **Using Command Line:**
+   ```bash
+   # Create a new Web API project
+   dotnet new webapi -n StockApi
+   cd StockApi
+   ```
+
+2. **Create the Stock Data Model:**
+   ```csharp
+   // Models/StockData.cs
+   public class StockData
+   {
+       public int Code { get; set; }
+       public string? ItemName { get; set; }
+       public string? PrintName { get; set; }
+       public decimal? SalePrice { get; set; }
+       public decimal? CostPrice { get; set; }
+       public decimal TotalAvailableStock { get; set; }
+       public DateTime? LastModified { get; set; }  // This may be null in your updated code
+   }
+   ```
+
+3. **Create the Controller:**
+   ```csharp
+   // Controllers/StockController.cs
+   [ApiController]
+   [Route("api/[controller]")]
+   public class StockController : ControllerBase
+   {
+       private readonly ILogger<StockController> _logger;
+
+       public StockController(ILogger<StockController> logger)
+       {
+           _logger = logger;
+       }
+
+       [HttpPost("update")]
+       public async Task<IActionResult> UpdateStock([FromBody] IEnumerable<StockData> stockData)
+       {
+           try
+           {
+               _logger.LogInformation($"Received {stockData.Count()} stock records");
+               
+               foreach (var item in stockData)
+               {
+                   _logger.LogInformation($"Item: {item.Code} - {item.ItemName}, Stock: {item.TotalAvailableStock}");
+               }
+
+               // Here you would typically save to your database or process the data
+               // For now, we're just logging it
+
+               return Ok(new { message = "Stock data received successfully", count = stockData.Count() });
+           }
+           catch (Exception ex)
+           {
+               _logger.LogError(ex, "Error processing stock data");
+               return StatusCode(500, new { error = "Internal server error" });
+           }
+       }
+   }
+   ```
+
+4. **Run the API:**
+   ```bash
+   dotnet run
+   ```
+
+5. **Update your Watcher Service:**
+   Make sure the API endpoint in your `appsettings.json` matches where you're running the API:
+   ```json
+   {
+     "ApiSettings": {
+       "Endpoint": "http://localhost:5297/api/stock/update"  // Adjust port as needed
+     }
+   }
+   ```
+
+## Option 2: Use a Free Testing Service
+
+If you prefer not to host your own API, you can temporarily use a service like:
+- **RequestBin**: Create a temporary endpoint to see the data being sent
+- **JSONPlaceholder**: For testing (though it won't store your data)
+
+## Option 3: Local API with Database Storage
+
+For a more complete solution, you could create an API that stores the data in a local database:
+
+1. Add Entity Framework to your API project
+2. Create a database context
+3. Store the received stock data in a local database
+
+## Important Notes:
+
+- The API can run on the same machine as your Busy database
+- The API just needs to be accessible at the endpoint configured in your appsettings.json
+- For production, you'd want proper error handling, authentication, and database storage
+- For testing, even just logging the received data is sufficient to verify the connection works
+
+Would you like me to provide a complete, ready-to-run API project that you can use to receive the data from your watcher service?

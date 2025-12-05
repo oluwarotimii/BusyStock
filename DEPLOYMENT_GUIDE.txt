@@ -1,0 +1,88 @@
+# Busy Accounting Stock Monitor - Deployment Guide
+
+## Overview
+This guide explains how to package and deploy the Busy Accounting Stock Monitor as an installable application that sends data to a remote destination.
+
+## Publishing the Application
+
+To create a standalone, deployable version of the application:
+
+### 1. Publish the Application
+From the WatcherService directory, run:
+
+```bash
+dotnet publish -c Release -r win-x64 --self-contained true
+```
+
+This creates a self-contained executable that doesn't require .NET to be installed on the target machine.
+
+The output will be in:
+`bin/Release/net10.0/win-x64/publish/`
+
+### 2. Configuration for Remote API
+Before deploying, update the `appsettings.json` file in the publish output with your remote API endpoint:
+
+```json
+{
+  "ApiSettings": {
+    "Endpoint": "https://your-remote-api.com/api/stock/update"
+  }
+}
+```
+
+Replace `https://your-remote-api.com/api/stock/update` with your actual API endpoint.
+
+### 3. Database Connection
+The application is configured to use:
+- Server: `(local)\BUSY` - connects to local SQL Server named instance "BUSY"
+- Database: `BusyComp0001_db12025` - the specific Busy company database
+- Authentication: Windows Authentication (Integrated Security)
+
+If deploying to a different server, update the connection string accordingly.
+
+## Installing as a Windows Service
+
+### Using the Built-in Scripts
+The application includes installation scripts:
+
+1. **Install:** Run `install.bat` as Administrator
+2. **Uninstall:** Run `uninstall.bat` as Administrator
+
+### Manual Installation (using sc command)
+```cmd
+sc create "Busy Accounting Stock Monitor" binPath= "C:\path\to\your\published\WatcherService.exe" start= auto
+sc description "Busy Accounting Stock Monitor" "Monitors Busy accounting database and sends stock updates to remote API"
+sc start "Busy Accounting Stock Monitor"
+```
+
+## Deployment Package Structure
+When creating an installer, include:
+1. All files from the publish directory
+2. `appsettings.json` (pre-configured with remote API URL)
+3. The install/uninstall batch files
+4. Documentation
+
+## Remote API Requirements
+Your remote API endpoint must:
+- Accept POST requests at the configured endpoint
+- Accept JSON data containing product/stock information
+- Return appropriate HTTP status codes (200 for success)
+- Be accessible from the machine running this service
+
+## Configuration Parameters
+- `ApiSettings.Endpoint`: Remote API endpoint URL
+- `PollingInterval.Seconds`: How often to check for changes (default: 30 seconds)
+- `ConnectionStrings.DefaultConnection`: Database connection string
+
+## Troubleshooting
+- Check Windows Event Logs for service errors
+- Verify the database connection from the deployment machine
+- Ensure the remote API endpoint is accessible and secured as needed
+- Confirm the service account has necessary permissions
+
+## Example Remote API Endpoint Format
+- HTTPS: `https://api.yourcompany.com/stock/update`
+- HTTP: `http://192.168.1.100:5000/api/stock/update`
+- With subdomain: `https://stockapi.yourdomain.com/v1/update`
+
+The application is ready to be packaged and deployed to send data to any remote destination.

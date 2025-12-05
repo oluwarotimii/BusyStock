@@ -1,0 +1,54 @@
+Busy Accounting Stock Monitor - Directory Structure
+====================================================
+
+Root Folder: C:\Users\Administrator\Desktop\CODE\Busy\WatcherService
+
+├── WatcherService/                 # Main service application
+│   ├── WatcherService.csproj       # Main service project file
+│   ├── Program.cs                  # Service entry point
+│   ├── ProductWatcherWorker.cs     # Background service logic
+│   ├── Models/
+│   │   └── ProductData.cs          # Data model
+│   ├── Services/
+│   │   ├── ProductDataService.cs   # Database operations
+│   │   └── ApiService.cs           # API client
+│   ├── appsettings.json            # Production configuration
+│   └── appsettings.Development.json # Development configuration
+│
+├── Setup/                         # Configuration setup application
+│   ├── Setup.csproj               # Setup project file
+│   ├── Program.cs                 # Interactive setup wizard
+│   └── appsettings.json           # Configuration template
+│
+├── install.bat                    # Windows batch installation script
+├── install.ps1                    # PowerShell installation script
+├── uninstall.bat                  # Windows batch uninstallation script
+├── build.bat                      # Build compilation script
+└── README.md                      # Complete documentation
+
+## Building and Installation Process:
+
+1. Build the project:
+   - Run build.bat to compile both the service and setup tool
+   
+2. Install the service:
+   - Run install.bat or install.ps1 as Administrator
+   - Follow the interactive setup wizard
+   - Service will be installed and started automatically
+
+## Key Components:
+
+- ProductWatcherWorker: The main background service that continuously monitors the database
+- ProductDataService: Handles database connections and queries with incremental updates
+- ApiService: Manages sending data to your API endpoint
+- Setup Console App: Interactive configuration wizard during installation
+- Installation Scripts: Automate the Windows Service installation process
+
+## Configuration Process:
+
+The setup wizard will prompt for:
+- Database server IP and port (3011)
+- Database name, username, and password
+- Connection test validation
+- API endpoint URL
+- Polling interval settings
