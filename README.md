@@ -1,39 +1,53 @@
-# Busy Accounting Stock Monitor Service
+# BASM (Busy Accounting Stock Monitor)
 
-This Windows Service monitors the Busy Accounting Software database and sends real-time stock and price updates to an API endpoint.
+A .NET Worker Service that monitors Busy accounting database and sends stock/product data updates to a remote API endpoint.
+
+## Overview
+
+This application is designed to run as a Windows Service that periodically checks a Busy accounting database for product and stock changes, then sends the updated information to a configured remote API endpoint.
 
 ## Features
-- Monitors stock levels and product prices from Busy database
-- Uses incremental updates to minimize database load
-- Runs as a Windows Service for continuous operation
-- Sends data to API endpoint in JSON format
-- Configurable polling interval
-- Interactive setup wizard for configuration during installation
 
-## Prerequisites
+- Monitors Busy accounting database (Master1 and Tran2 tables)
+- Extracts product information (codes, names, prices, stock levels)
+- Sends data to remote API at configurable intervals
+- Runs as a background Windows Service
+- Self-contained deployment with no external dependencies
+- Built-in retry mechanism for network failures
 
-- .NET 10.0 Runtime
-- Access to Busy Accounting database
-- API endpoint to receive data updates
+## Architecture
 
-## Quick Installation
+- **.NET 10.0** Worker Service
+- **Dapper** for database access
+- **SQL Server** database connectivity
+- **Windows Service** installation capability (Service Name: BASM)
+- Configurable polling interval (default 30 seconds)
 
-1. Run `build.bat` to compile the service and setup tool
-2. Run `install.bat` or `install.ps1` as Administrator
-3. Follow the interactive setup wizard to configure your database and API settings
-4. The service will be installed and started automatically
+## Installation
 
-## Manual Configuration
+### Prerequisites
+- Windows Server with .NET 10.0 runtime (or use self-contained deployment)
+- Access to Busy accounting SQL Server database
+- Remote API endpoint to receive data
 
-If you prefer to manually configure the service, update the `appsettings.json` file with your specific settings:
+### Deployment Steps
+
+1. Download and extract the published application files
+2. Update `appsettings.json` with database connection and API endpoint
+3. Run `install.bat` as Administrator to install as Windows Service (BASM)
+4. Start the service manually or restart the server
+
+### Configuration
+
+The application is configured via `appsettings.json`:
 
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Server=YOUR_AWS_SERVER_IP,3011;Database=BusyDatabase;User Id=your_username;Password=your_password;TrustServerCertificate=True;"
+    "DefaultConnection": "Server=your-server;Database=your-database;Integrated Security=True;"
   },
   "ApiSettings": {
-    "Endpoint": "http://your-api-endpoint/api/stock/update"
+    "Endpoint": "https://your-api.com/api/stock/update"
   },
   "PollingInterval": {
     "Seconds": 30
@@ -41,90 +55,57 @@ If you prefer to manually configure the service, update the `appsettings.json` f
 }
 ```
 
-### Connection String Parameters:
-- `Server`: IP address and port (3011) of your Busy database server
-- `Database`: Name of the Busy database
-- `User Id`: Database username
-- `Password`: Database password
+## Usage
 
-### API Settings:
-- `Endpoint`: The URL where product data should be sent
+Once installed as a Windows Service, the application runs continuously in the background. It:
+- Connects to the configured Busy database
+- Queries for product and stock information
+- Sends data to the remote API endpoint at configured intervals
+- Logs all activity to Windows Event Log
 
-### Polling Interval:
-- `Seconds`: How often (in seconds) to check for database changes
+### Service Management Commands
 
-## Installation Using Setup Wizard
+- **Start Service:** `net start BASM`
+- **Stop Service:** `net stop BASM`
+- **Check Status:** `sc query BASM`
 
-1. Publish the applications:
-   ```bash
-   build.bat
-   ```
+## Uninstallation
 
-2. Run the installation script as Administrator:
-   ```cmd
-   install.bat
-   ```
-   Or using PowerShell:
-   ```powershell
-   .\install.ps1
-   ```
+Run `uninstall.bat` as Administrator to remove the Windows Service (BASM).
 
-3. The setup wizard will guide you through:
-   - Database server configuration (IP, port 3011)
-   - Database name, user and password
-   - Connection test
-   - API endpoint configuration
-   - Polling interval settings
+## Security
 
-4. The service will be installed and started automatically
+- Uses Windows Authentication by default for database connections
+- Supports SSL for API communication
+- No sensitive data stored in configuration
 
-## Running for Development
+## Monitoring
 
-To run without installing as a service:
-```bash
-dotnet WatcherService.dll
-```
+- Service status visible in Windows Services panel (look for "BASM")
+- Application logs available in Windows Event Log under "Application" logs
+- Error handling with automatic retry mechanism
 
-## Service Management
+## Development
 
-- Start: `sc start "Busy Accounting Stock Monitor"`
-- Stop: `sc stop "Busy Accounting Stock Monitor"`
-- Remove: Use `uninstall.bat` or `.\install.ps1 -Uninstall`
+The project includes:
+- Main service (ProductWatcherWorker)
+- Database access layer (ProductDataService)
+- API communication layer (ApiService)
+- Setup utility for configuration
+- Installation scripts for Windows Service (BASM)
 
-## Logs
+## Enterprise Deployment
 
-The service logs to the Windows Event Log. You can also configure file logging by updating the logging configuration in appsettings.json.
+- Self-contained deployment package
+- No external dependencies required
+- Ready for AWS Windows Server deployment
+- Production-ready configuration
+- Short service name (BASM) for easy management
 
-## Troubleshooting
+## Support
 
-If the service fails to start:
-1. Check the Windows Event Log for error messages
-2. Verify the database connection string
-3. Ensure the API endpoint is accessible
-4. Check file permissions on the service executable
-5. Run the service in console mode first to see detailed error messages
+For issues or questions, check Windows Event Logs for application errors.
 
-## Data Schema
+---
 
-The service sends an array of product objects with the following properties:
-```json
-[
-  {
-    "code": 1152,
-    "itemName": "Product Name",
-    "printName": "Print Name",
-    "salePrice": 19.99,
-    "costPrice": 15.50,
-    "totalAvailableStock": 100,
-    "lastModified": "2023-12-05T10:30:00Z"
-  }
-]
-```
-
-## Security Considerations
-
-- Store database credentials securely
-- Use HTTPS for API endpoints
-- Implement API authentication and authorization
-- Regularly update the service to address security vulnerabilities
-- Run the service under a dedicated, limited-privilege account
+*This application was developed to provide seamless integration between Busy accounting systems and remote inventory management solutions.*

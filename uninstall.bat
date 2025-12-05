@@ -1,10 +1,10 @@
 @echo off
 setlocal
 
-echo Busy Accounting Stock Monitor Uninstallation
-echo ============================================
+echo BASM Uninstallation
+echo ===================
 
-set "SERVICE_NAME=Busy Accounting Stock Monitor"
+set "SERVICE_NAME=BASM"
 
 REM Check if service exists
 sc query "%SERVICE_NAME%" >nul 2>&1

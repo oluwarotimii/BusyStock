@@ -1,8 +1,8 @@
 @echo off
 setlocal
 
-echo Busy Accounting Stock Monitor Installation
-echo ========================================
+echo BASM Installation
+echo =================
 
 REM Get the directory where this script is located
 set "SCRIPT_DIR=%~dp0"
@@ -28,8 +28,8 @@ echo Configuration completed. Installing Windows Service...
 echo.
 
 REM Install the service using sc command
-set "SERVICE_NAME=Busy Accounting Stock Monitor"
-set "SERVICE_PATH=%SCRIPT_DIR%..\WatcherService\WatcherService.exe"
+set "SERVICE_NAME=BASM"
+set "SERVICE_PATH=%SCRIPT_DIR%WatcherService.exe"
 
 REM Check if service already exists and remove it if needed
 sc query "%SERVICE_NAME%" >nul 2>&1
@@ -37,17 +37,17 @@ if %ERRORLEVEL% EQU 0 (
     echo Stopping existing service...
     sc stop "%SERVICE_NAME%" >nul 2>&1
     timeout /t 3 /nobreak >nul
-    
+
     echo Removing existing service...
     sc delete "%SERVICE_NAME%" >nul 2>&1
     timeout /t 3 /nobreak >nul
 )
 
 echo Installing service...
-sc create "%SERVICE_NAME%" binPath= "%SERVICE_PATH%" start= auto DisplayName= "Busy Accounting Stock Monitor"
+sc create "%SERVICE_NAME%" binPath= "%SERVICE_PATH%" start= auto DisplayName= "BASM"
 if %ERRORLEVEL% EQU 0 (
     echo Service installed successfully.
-    
+
     REM Start the service
     sc start "%SERVICE_NAME%"
     if %ERRORLEVEL% EQU 0 (

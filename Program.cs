@@ -4,7 +4,7 @@ using WatcherService.Services;
 IHost host = Host.CreateDefaultBuilder(args)
     .UseWindowsService(options =>
     {
-        options.ServiceName = "Busy Accounting Stock Monitor";
+        options.ServiceName = "BASM";
     })
     .ConfigureServices((hostContext, services) =>
     {
