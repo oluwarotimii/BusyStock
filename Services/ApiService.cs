@@ -31,21 +31,22 @@ namespace WatcherService.Services
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                 var response = await _httpClient.PostAsync(_apiEndpoint, content);
-                
+
                 if (response.IsSuccessStatusCode)
                 {
-                    _logger.LogInformation("Successfully sent {Count} product records to API", productData.Count());
+                    // Only minimal logging - only when sending data
+                    _logger.LogInformation("Sent {Count} records", productData.Count());
                     return true;
                 }
                 else
                 {
-                    _logger.LogError("Failed to send data to API. Status: {Status}", response.StatusCode);
+                    _logger.LogWarning("API error: {Status}", response.StatusCode);
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error sending product data to API");
+                _logger.LogError("API failed: {Message}", ex.Message);
                 return false;
             }
         }

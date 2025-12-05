@@ -41,37 +41,29 @@ namespace WatcherService
         {
             try
             {
-                _logger.LogInformation("Starting data update check at: {Time}", DateTimeOffset.Now);
-
                 using var scope = _serviceProvider.CreateScope();
                 var productService = scope.ServiceProvider.GetRequiredService<IProductDataService>();
                 var apiService = scope.ServiceProvider.GetRequiredService<IApiService>();
 
-                // Use incremental data retrieval to get only the latest changes
+                // Get product data
                 var productData = await productService.GetProductDataIncrementalAsync(_lastCheckedTime);
 
                 if (productData.Any())
                 {
-                    _logger.LogInformation("Retrieved {Count} product records from database (incremental)", productData.Count());
+                    // Only log when sending data
+                    _logger.LogInformation("Sending {Count} records", productData.Count());
 
                     var success = await apiService.SendProductDataAsync(productData);
-                    if (success)
-                    {
-                        _logger.LogInformation("Successfully processed and sent incremental product data update");
-                    }
-                    else
+                    if (!success)
                     {
                         _logger.LogWarning("Failed to send product data to API");
                     }
                 }
-                else
-                {
-                    _logger.LogDebug("No new product data changes found since {LastCheckTime}", _lastCheckedTime);
-                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing data update");
+                // Only log critical errors
+                _logger.LogError("Update failed: {Message}", ex.Message);
             }
         }
 
