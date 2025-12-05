@@ -1,0 +1,146 @@
+Proposal: Real-Time Stock & Price Monitoring System for Busy Accounting Software
+
+Prepared by: Oluwarotimi
+Date: 5th December 2025
+
+1. Executive Summary
+
+We aim to implement a reliable, real-time system that monitors stock and pricing information from our Busy Accounting Software and makes this data available to our e-commerce platform and other downstream systems.
+
+Currently, stock updates and pricing changes are manual, slow, and error-prone, leading to potential overselling, inaccurate pricing online, and increased operational overhead.
+
+The proposed solution leverages a lightweight C# application installed on the AWS server hosting Busy, which continuously monitors relevant database tables and exposes the information via a secure API. This allows external systems to automatically fetch the latest data in JSON format, ensuring accurate, timely updates across all platforms.
+
+2. Objective
+
+Automate real-time monitoring of stock levels and product prices from Busy Accounting Software.
+
+Make this data accessible to external systems (e-commerce website, internal dashboards) securely and efficiently.
+
+Minimize manual intervention and reduce errors.
+
+Ensure system efficiency without impacting Busy’s performance.
+
+3. Progress & Current Findings
+3.1 Database Discovery
+
+Busy uses a Perpetual Inventory System. Stock is calculated from individual transactions rather than a static stock balance.
+
+Key tables identified:
+
+Master1 → Stores master product data, including prices.
+
+Tran2 → Stores individual stock movements (inflows and outflows).
+
+Key columns confirmed:
+
+Master1.Code → Unique product identifier
+
+Master1.D3 → Selling Price
+
+Master1.D4 → Cost Price
+
+Master1.ModificationTime → Last modification timestamp
+
+Tran2.Value1 → Quantity movements (positive for purchases, negative for sales)
+
+3.2 Query Development
+
+Developed an incremental SQL query that:
+
+Computes the current stock for each product using SUM(Value1) from Tran2.
+
+Joins with master data to retrieve product names, prices, and last modification time.
+
+Supports incremental updates using ModificationTime, fetching only products updated since the last check.
+
+Sample SQL structure confirmed and validated for accuracy.
+
+3.3 Testing
+
+A test query successfully retrieved accurate stock and pricing information for selected items.
+
+Incremental logic ensures only new or updated records are processed, minimizing load on the Busy database.
+
+4. Proposed Solution Architecture
+4.1 System Components
+
+C# Watcher Service (Windows Service / .NET Worker)
+
+Runs continuously on the AWS server hosting Busy.
+
+Executes the incremental query every few seconds.
+
+Converts results to JSON.
+
+Sends updates to an internal API endpoint.
+
+C# Web API (ASP.NET Core)
+
+Exposes endpoints for external systems to fetch stock and pricing data:
+
+GET /api/stock/latest → Retrieve the latest stock and price information.
+
+POST /api/stock/update → Receives updates from the watcher service.
+
+Hosted on the same AWS server or a secure internal network.
+
+4.2 Data Flow
+[Busy Database] → [C# Watcher Service] → [Internal API] → [E-Commerce Platform / External Systems]
+
+
+The Watcher Service polls the database incrementally.
+
+Any changes are converted to JSON and pushed to the API.
+
+External systems fetch the latest updates securely via API calls.
+
+5. Deployment Plan
+
+Deploy C# Watcher Service on AWS server
+
+Runs as a Windows Service for 24/7 continuous operation.
+
+Minimal memory footprint; does not interfere with Busy.
+
+Deploy C# Web API on AWS server
+
+Securely exposed via internal network, firewall rules, or domain/HTTPS.
+
+Optional public access via firewall rules, VPN, or tunneling if external systems need direct access.
+
+Security Measures
+
+API secured with API keys or JWT tokens.
+
+Access restricted to authorized systems only.
+
+6. Benefits
+
+Real-Time Data: Stock and pricing updates available instantly.
+
+Error Reduction: Eliminates manual errors from spreadsheets or CSV uploads.
+
+Efficiency: Frees staff from repetitive updates; system runs autonomously.
+
+Scalability: Can support hundreds or thousands of products without performance degradation.
+
+Future Proof: API architecture allows integration with other platforms or analytics tools.
+
+7. Next Steps
+
+Complete C# Watcher Service development and test against the full database.
+
+Build and deploy the C# Web API.
+
+Implement API security and access control.
+
+Configure external systems to fetch data from the API.
+
+Monitor performance and adjust polling interval as needed.
+
+8. Conclusion
+
+Implementing a C# Watcher Service + API architecture on the AWS server will deliver a fast, lightweight, and reliable system that ensures real-time, accurate stock and price information for our e-commerce platform.
+
+This approach reduces operational overhead, prevents stock discrepancies, and provides a scalable foundation for future automation and analytics initiatives.
