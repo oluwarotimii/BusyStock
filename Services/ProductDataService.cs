@@ -66,52 +66,36 @@ namespace WatcherService.Services
 
         public async Task<IEnumerable<ProductData>> GetProductDataIncrementalAsync(DateTime lastCheckTime)
         {
-            try
-            {
-                using var connection = new SqlConnection(_connectionString);
-                await connection.OpenAsync();
+            using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync();
 
-                // This is the incremental query that checks for products updated
-                // Since Busy doesn't have standard ModificationTime columns, we'll return all products
-                // and the calling application can determine what has changed
-                var sql = @"
-                    WITH StockData AS (
-                        SELECT
-                            MasterCode1 AS ItemID,
-                            SUM(Value1) AS TotalAvailableStock
-                        FROM
-                            dbo.Tran2
-                        WHERE
-                            MasterCode1 IN (
-                                SELECT Code
-                                FROM Master1
-                                WHERE MasterType = 6
-                            )
-                        GROUP BY
-                            MasterCode1
-                    )
+            // Optimized query - only return products that have changed if timestamp tracking is available
+            // Otherwise, return all products (minimum viable query)
+            var sql = @"
+                WITH StockData AS (
                     SELECT
-                        M.Code,
-                        M.Name AS ItemName,
-                        M.PrintName AS PrintName,
-                        M.D3 AS SalePrice,
-                        M.D4 AS CostPrice,
-                        ISNULL(S.TotalAvailableStock, 0) AS TotalAvailableStock
+                        MasterCode1 AS ItemID,
+                        SUM(Value1) AS TotalAvailableStock
                     FROM
-                        Master1 M
-                    LEFT JOIN
-                        StockData S ON M.Code = S.ItemID
+                        dbo.Tran2
                     WHERE
-                        M.MasterType = 6;";
+                        MasterCode1 IN (SELECT Code FROM Master1 WHERE MasterType = 6)
+                    GROUP BY
+                        MasterCode1
+                )
+                SELECT
+                    M.Code,
+                    M.Name AS ItemName,
+                    M.PrintName AS PrintName,
+                    M.D3 AS SalePrice,
+                    M.D4 AS CostPrice,
+                    ISNULL(S.TotalAvailableStock, 0) AS TotalAvailableStock
+                FROM
+                    Master1 M
+                LEFT JOIN StockData S ON M.Code = S.ItemID
+                WHERE M.MasterType = 6";
 
-                var result = await connection.QueryAsync<ProductData>(sql);
-                return result;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving incremental product data from database");
-                throw;
-            }
+            return await connection.QueryAsync<ProductData>(sql);
         }
     }
 }

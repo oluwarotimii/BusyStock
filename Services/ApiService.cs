@@ -19,7 +19,7 @@ namespace WatcherService.Services
         {
             _httpClient = httpClient;
             _logger = logger;
-            _apiEndpoint = configuration["ApiSettings:Endpoint"] 
+            _apiEndpoint = configuration["ApiSettings:Endpoint"]
                 ?? throw new ArgumentNullException("ApiSettings:Endpoint");
         }
 
@@ -30,22 +30,32 @@ namespace WatcherService.Services
                 var json = JsonConvert.SerializeObject(productData);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
+                _logger.LogDebug("Attempting to send {Count} records to {Endpoint}", productData.Count(), _apiEndpoint);
+
                 var response = await _httpClient.PostAsync(_apiEndpoint, content);
-                
+
                 if (response.IsSuccessStatusCode)
                 {
-                    _logger.LogInformation("Successfully sent {Count} product records to API", productData.Count());
+                    _logger.LogInformation("Successfully sent {Count} records", productData.Count());
                     return true;
                 }
                 else
                 {
-                    _logger.LogError("Failed to send data to API. Status: {Status}", response.StatusCode);
+                    // Get more details about the error
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogWarning("API error: {Status}, Content: {Content}, Request Data Length: {DataLength}",
+                        response.StatusCode, errorContent, json.Length);
+
+                    // Log a sample of the data being sent for debugging (first few records)
+                    var sampleData = productData.Take(3).ToList();
+                    _logger.LogDebug("Sample of data sent: {@SampleData}", sampleData);
+
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error sending product data to API");
+                _logger.LogError(ex, "API failed: {Message}", ex.Message);
                 return false;
             }
         }
