@@ -13,6 +13,10 @@ IHost host = Host.CreateDefaultBuilder(args)
 
         // Register services
         services.AddScoped<IProductDataService, ProductDataService>();
+        services.AddScoped<IChangeTrackingService, ChangeTrackingService>();
+        services.AddScoped<ISystemMonitorService, SystemMonitorService>();
+        services.AddScoped<IPerformanceMonitorService, PerformanceMonitorService>();
+        services.AddScoped<IAlertService, AlertService>();
         services.AddHttpClient<ApiService>();
         services.AddScoped<IApiService, ApiService>();
 
