@@ -10,6 +10,8 @@ namespace WatcherService
         private readonly int _pollingIntervalSeconds;
         private readonly int _batchSize;
         private readonly bool _useChangeTracking;
+        private readonly bool _useRecentlyModifiedOnly;
+        private readonly int _transactionDaysToInclude;
         private readonly TimeSpan _businessHoursStart;
         private readonly TimeSpan _businessHoursEnd;
 
@@ -20,6 +22,8 @@ namespace WatcherService
             _pollingIntervalSeconds = int.Parse(configuration["PollingInterval:Seconds"] ?? "30"); // Default to 30 seconds
             _batchSize = int.Parse(configuration["BatchSettings:Size"] ?? "200"); // Default batch size
             _useChangeTracking = bool.Parse(configuration["SyncSettings:UseChangeTracking"] ?? "true");
+            _useRecentlyModifiedOnly = bool.Parse(configuration["TransactionSettings:UseRecentlyModifiedOnly"] ?? "false");
+            _transactionDaysToInclude = int.Parse(configuration["TransactionSettings:DaysToInclude"] ?? "90");
 
             // Business hours configuration (default to 8 AM to 6 PM)
             var businessStartHour = int.Parse(configuration["BusinessHours:StartHour"] ?? "8");
@@ -108,7 +112,12 @@ namespace WatcherService
                 IEnumerable<ProductData> productData;
                 var dataRetrievalStartTime = DateTime.UtcNow;
 
-                if (_useChangeTracking)
+                if (_useRecentlyModifiedOnly)
+                {
+                    // Get only products that have been modified in the specified time window
+                    productData = await productService.GetRecentlyModifiedProductsAsync(_transactionDaysToInclude);
+                }
+                else if (_useChangeTracking)
                 {
                     // Get incremental changes using change tracking
                     productData = await GetIncrementalProductData(scope);
@@ -193,14 +202,14 @@ namespace WatcherService
                 _logger.LogError(ex, "Update failed after {DurationMs}ms: {Message}", duration.TotalMilliseconds, ex.Message);
 
                 // Record the failure
-                using var scope = _serviceProvider.CreateScope();
-                var performanceMonitor = scope.ServiceProvider.GetRequiredService<IPerformanceMonitorService>();
-                performanceMonitor.RecordMetric("Sync.Failure", 1, DateTime.UtcNow);
-                performanceMonitor.RecordMetric("Sync.DurationMs", duration.TotalMilliseconds, DateTime.UtcNow);
+                using var failureScope = _serviceProvider.CreateScope();
+                var failurePerformanceMonitor = failureScope.ServiceProvider.GetRequiredService<IPerformanceMonitorService>();
+                failurePerformanceMonitor.RecordMetric("Sync.Failure", 1, DateTime.UtcNow);
+                failurePerformanceMonitor.RecordMetric("Sync.DurationMs", duration.TotalMilliseconds, DateTime.UtcNow);
 
                 // Send alert for sync failure
-                var alertService = scope.ServiceProvider.GetRequiredService<IAlertService>();
-                await alertService.SendAlertAsync("SYNC_FAILURE",
+                var failureAlertService = failureScope.ServiceProvider.GetRequiredService<IAlertService>();
+                await failureAlertService.SendAlertAsync("SYNC_FAILURE",
                     $"Product data sync failed: {ex.Message}",
                     new Dictionary<string, object>
                     {
@@ -215,16 +224,16 @@ namespace WatcherService
             _logger.LogDebug("Product data sync completed in {DurationMs}ms", totalDuration.TotalMilliseconds);
 
             // Record total sync time
-            using var scope = _serviceProvider.CreateScope();
-            var performanceMonitor = scope.ServiceProvider.GetRequiredService<IPerformanceMonitorService>();
-            performanceMonitor.RecordMetric("Sync.DurationMs", totalDuration.TotalMilliseconds, DateTime.UtcNow);
+            using var finalScope = _serviceProvider.CreateScope();
+            var finalPerformanceMonitor = finalScope.ServiceProvider.GetRequiredService<IPerformanceMonitorService>();
+            finalPerformanceMonitor.RecordMetric("Sync.DurationMs", totalDuration.TotalMilliseconds, DateTime.UtcNow);
 
             // Check for performance degradation and trigger alerts if needed
-            var alertService = scope.ServiceProvider.GetRequiredService<IAlertService>();
+            var finalAlertService = finalScope.ServiceProvider.GetRequiredService<IAlertService>();
 
             // Get recent metrics to check for performance issues
-            var recentMetrics = performanceMonitor.GetRecentMetrics(10); // Last 10 records
-            await alertService.ProcessMetricsForAlertsAsync(recentMetrics);
+            var recentMetrics = finalPerformanceMonitor.GetRecentMetrics(10); // Last 10 records
+            await finalAlertService.ProcessMetricsForAlertsAsync(recentMetrics);
         }
 
         private async Task<IEnumerable<ProductData>> GetIncrementalProductData(IServiceScope scope)

@@ -1,5 +1,5 @@
-using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
+using System.Data.SqlClient;
+using Dapper;
 using WatcherService.Models;
 
 namespace WatcherService.Services
